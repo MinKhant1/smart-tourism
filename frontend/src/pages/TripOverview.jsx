@@ -1,8 +1,7 @@
 import React from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 
 const TripOverview = () => {
-  const navigate = useNavigate();
   const { trip } = useOutletContext();
 
   if (!trip) return null;
@@ -11,7 +10,7 @@ const TripOverview = () => {
   const interests = Array.isArray(prefs.interests) ? prefs.interests : [];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-bold text-slate-800 mb-4">Trip Details</h2>
         <div className="space-y-2 text-slate-700">
@@ -31,16 +30,6 @@ const TripOverview = () => {
             </div>
           )}
         </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">Actions</h2>
-        <button
-          className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
-          onClick={() => navigate(`/trips/${trip._id}/itineraries`)}
-        >
-          View Itinerary
-        </button>
       </div>
     </div>
   );

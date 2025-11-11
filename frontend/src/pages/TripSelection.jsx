@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTrip } from '../services/trips.service';
 import { searchCities } from '../services/cities.service';
+import AuthService from '../services/auth.service';
 
 const TripSelection = () => {
   const navigate = useNavigate();
@@ -13,6 +14,15 @@ const TripSelection = () => {
     currency: 'USD',
     interests: []
   });
+
+  // Preload user's saved interests into the trip form
+  useEffect(() => {
+    const user = AuthService.getCurrentUser();
+    const savedInterests = user?.preferences?.interests || [];
+    if (savedInterests.length > 0) {
+      setTripData(prev => ({ ...prev, interests: savedInterests }));
+    }
+  }, []);
 
   // Autocomplete state for Destination City
   const [citySuggestions, setCitySuggestions] = useState([]);
