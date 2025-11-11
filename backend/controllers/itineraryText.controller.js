@@ -70,7 +70,15 @@ function systemPrompt() {
 
 export const planTripFromText = async (req, res, next) => {
   try {
-    const { query, defaultCity = 'Bangkok', defaultCountry = 'Thailand', defaultPartySize = 2, save = false } = req.body;
+    const {
+      query,
+      defaultCity = 'Bangkok',
+      defaultCountry = 'Thailand',
+      defaultPartySize = 2,
+      save = false,
+      startDate,
+      endDate,
+    } = req.body;
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ message: 'Body must include "query": string' });
     }
@@ -88,12 +96,15 @@ export const planTripFromText = async (req, res, next) => {
       role: 'user',
       content:
         `User request: ${query}
-If dates, city, or party size are missing or ambiguous, infer sensibly.
-- If city missing, use ${defaultCity}.
-- If country missing, use ${defaultCountry}.
-- If partySize missing, use ${defaultPartySize}.
-- currency: THB.
-Return ONLY JSON matching the schema.`
+Trip dates: ${startDate || 'UNKNOWN'} to ${endDate || 'UNKNOWN'} (cover EVERY date inclusive; do NOT shorten).
+Defaults:
+- city: ${defaultCity}
+- country: ${defaultCountry}
+- partySize: ${defaultPartySize}
+- currency: THB
+Rules:
+- Use provided startDate/endDate if present; ignore conflicting dates in the text.
+- Return ONLY JSON matching the schema.`
     };
 
     const content = await askPerplexity({
@@ -162,17 +173,45 @@ Return ONLY JSON matching the schema.`
       return [];
     };
 
-    const normalizedDays = Array.isArray(json.days)
+    // Build expected date range (inclusive) if we have explicit trip dates
+    const useStart = startDate || json.startDate;
+    const useEnd = endDate || json.endDate;
+
+    const dateRange = (() => {
+      try {
+        if (!useStart || !useEnd) return [];
+        const out = [];
+        const s = new Date(useStart);
+        const e = new Date(useEnd);
+        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+          out.push(d.toISOString().slice(0, 10));
+        }
+        return out;
+      } catch {
+        return [];
+      }
+    })();
+
+    const normalizedDaysRaw = Array.isArray(json.days)
       ? json.days.map((d, idx) => {
           const activities = normalizeActivities(d?.activities);
           return {
-            date: d?.date || json.startDate || `Day ${idx + 1}`,
+            date: d?.date || useStart || `Day ${idx + 1}`,
             summary: d?.summary || '',
             activities,
             daily_budget_estimate: typeof d?.daily_budget_estimate === 'number' ? d.daily_budget_estimate : 0
           };
         })
       : [];
+
+    // Align to date range: ensure each expected date has an entry
+    const normalizedDays = dateRange.length
+      ? dateRange.map((date, idx) => {
+          const found = normalizedDaysRaw.find((d) => d.date === date) || normalizedDaysRaw[idx];
+          if (found) return found;
+          return { date, summary: '', activities: [], daily_budget_estimate: 0 };
+        })
+      : normalizedDaysRaw;
 
     console.log('[ItineraryText] Normalized first day sample', {
       hasDays: normalizedDays.length > 0,
@@ -187,8 +226,8 @@ Return ONLY JSON matching the schema.`
         tripId: req.params?.id || req.body?.tripId,
         city: json.city,
         country: json.country,
-        startDate: json.startDate,
-        endDate: json.endDate,
+        startDate: useStart || json.startDate,
+        endDate: useEnd || json.endDate,
         partySize: json.partySize,
         preferences: {}, // unknown from free text; store later if needed
         currency: json.currency || 'THB',
@@ -228,6 +267,41 @@ Return ONLY JSON matching the schema.`
         const partySize = Number(req.body?.defaultPartySize || 2);
 
         const { Itinerary } = await import('../models/itineraries.model.js');
+
+        // Build full inclusive date range
+        const placeholderDays = (() => {
+          try {
+            const out = [];
+            const s = new Date(start);
+            const e = new Date(end);
+            let i = 1;
+            for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+              const dateStr = d.toISOString().slice(0, 10);
+              out.push({
+                date: dateStr,
+                summary: `Day ${i} placeholder itinerary`,
+                activities: [
+                  { time: '09:00', title: 'Explore city center', type: 'sightseeing', notes: '', cost_estimate: 0, duration_minutes: 120 }
+                ],
+                daily_budget_estimate: 0
+              });
+              i += 1;
+            }
+            return out;
+          } catch {
+            return [
+              {
+                date: start,
+                summary: 'Day 1 placeholder itinerary',
+                activities: [
+                  { time: '09:00', title: 'Explore city center', type: 'sightseeing', notes: '', cost_estimate: 0, duration_minutes: 120 }
+                ],
+                daily_budget_estimate: 0
+              }
+            ];
+          }
+        })();
+
         const doc = await Itinerary.create({
           userId: req.userId,
           tripId: req.params?.id || req.body?.tripId,
@@ -238,16 +312,7 @@ Return ONLY JSON matching the schema.`
           partySize,
           preferences: {},
           currency: 'THB',
-          days: [
-            {
-              date: start,
-              summary: 'Day 1 placeholder itinerary',
-              activities: [
-                { time: '09:00', title: 'Explore city center', type: 'sightseeing', notes: '', cost_estimate: 0, duration_minutes: 120 }
-              ],
-              daily_budget_estimate: 0
-            }
-          ],
+          days: placeholderDays,
           totals: { estimated_total_cost: 0, attractions_count: 1, food_spots_count: 0, transport_count: 0 },
           source: 'fallback'
         });
