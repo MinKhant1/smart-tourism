@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, me } from '../controllers/auth.controller.js';
+import { register, login, me, updatePreferences } from '../controllers/auth.controller.js';
 import { auth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { z } from 'zod';
@@ -21,5 +21,6 @@ const loginSchema = z.object({
 router.post('/register', validate(registerSchema), register);
 router.post('/login', validate(loginSchema), login);
 router.get('/me', auth, me);
+router.patch('/preferences', auth, updatePreferences);
 
 export default router;

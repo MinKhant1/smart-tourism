@@ -15,7 +15,8 @@ const Signup = () => {
     e.preventDefault();
     AuthService.register(username, email, password).then(
       () => {
-        navigate('/login');
+        // Auto-logged in; go to onboarding interests
+        navigate('/onboarding');
       },
       (error) => {
         console.log(error);

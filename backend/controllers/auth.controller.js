@@ -44,3 +44,20 @@ export const me = async (req, res, next) => {
     next(err);
   }
 };
+
+// Update the authenticated user's preferences (partial merge)
+export const updatePreferences = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const payload = req.body?.preferences ?? req.body ?? {};
+    const current = user.preferences?.toObject ? user.preferences.toObject() : (user.preferences || {});
+    user.preferences = { ...current, ...payload };
+    await user.save();
+
+    return res.json({ user: { id: user._id, name: user.name, email: user.email, preferences: user.preferences } });
+  } catch (err) {
+    next(err);
+  }
+};

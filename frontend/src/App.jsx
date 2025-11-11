@@ -13,6 +13,7 @@ import TripLayout from './pages/TripLayout';
 import TripOverview from './pages/TripOverview';
 import TripAiAssist from './pages/TripAiAssist';
 import AuthService from './services/auth.service';
+import Onboarding from './pages/Onboarding';
 
 function App() {
   const Root = () => {
@@ -26,6 +27,7 @@ function App() {
         <Route path="/" element={<Root />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/trip-selection" element={<TripSelection />} />
