@@ -7,7 +7,8 @@ const tripSchema = new mongoose.Schema(
     city: String,
     startDate: String,
     endDate: String,
-    preferences: Object
+    preferences: Object,
+    currency: { type: String, default: 'USD' }
   },
   { timestamps: true }
 );

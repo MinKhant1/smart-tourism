@@ -17,7 +17,8 @@ const createSchema = z.object({
 export const createTrip = async (req, res, next) => {
   try {
     const body = createSchema.parse(req.body);
-    const doc = await Trip.create({ userId: req.userId, ...body });
+    const currencyFromPrefs = body?.preferences?.budgetCurrency;
+    const doc = await Trip.create({ userId: req.userId, ...body, currency: currencyFromPrefs || undefined });
     res.status(201).json({ trip: doc });
   } catch (err) {
     next(err);

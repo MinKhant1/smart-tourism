@@ -10,6 +10,7 @@ const TripSelection = () => {
     startDate: '',
     endDate: '',
     budget: '',
+    currency: 'USD',
     interests: []
   });
 
@@ -77,7 +78,7 @@ const TripSelection = () => {
         city: tripData.city,
         startDate: tripData.startDate,
         endDate: tripData.endDate,
-        preferences: { interests: tripData.interests, budget: tripData.budget }
+        preferences: { interests: tripData.interests, budget: Number(tripData.budget) || 0, budgetCurrency: tripData.currency }
       });
       navigate(`/trips/${trip._id}/itineraries`);
     } catch (err) {
@@ -168,16 +169,34 @@ const TripSelection = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Budget ($)</label>
-                  <input
-                    type="number"
-                    name="budget"
-                    value={tripData.budget}
-                    onChange={handleInputChange}
-                    placeholder="Enter your budget"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Budget</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <input
+                      type="number"
+                      name="budget"
+                      value={tripData.budget}
+                      onChange={handleInputChange}
+                      placeholder="Enter your budget"
+                      className="col-span-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                    <select
+                      name="currency"
+                      value={tripData.currency}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="THB">THB</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="JPY">JPY</option>
+                      <option value="INR">INR</option>
+                      <option value="SGD">SGD</option>
+                      <option value="MYR">MYR</option>
+                      <option value="AUD">AUD</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
