@@ -105,6 +105,7 @@ Return ONLY JSON matching the schema.`
       const { Itinerary } = await import('../models/itineraries.model.js');
       const doc = await Itinerary.create({
         userId: req.userId,
+        tripId: req.params?.id || req.body?.tripId,
         city: json.city,
         country: json.country,
         startDate: json.startDate,
@@ -122,7 +123,7 @@ Return ONLY JSON matching the schema.`
     // return raw JSON itinerary without saving
     return res.status(200).json({ itinerary: json, source: 'perplexity' });
   } catch (err) {
-    // If content had code fences or minor format issues
+    // If Perplexity failed or API key is missing, attempt a graceful fallback.
     try {
       const cleaned = (err?.message?.includes('Unexpected token') && err?.content)
         ? err.content.replace(/```json|```/g, '').trim()
@@ -132,6 +133,51 @@ Return ONLY JSON matching the schema.`
         return res.status(200).json({ itinerary: json, source: 'perplexity-cleaned' });
       }
     } catch {}
+
+    // Persist a minimal itinerary when save=true, so users can still create
+    // itineraries for a trip even if the AI call fails.
+    try {
+      if (req.body?.save && req.userId) {
+        const today = new Date();
+        const start = (req.body?.startDate) || today.toISOString().slice(0, 10);
+        const endDateObj = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
+        const end = (req.body?.endDate) || endDateObj.toISOString().slice(0, 10);
+        const city = req.body?.defaultCity || 'Bangkok';
+        const country = req.body?.defaultCountry || 'Thailand';
+        const partySize = Number(req.body?.defaultPartySize || 2);
+
+        const { Itinerary } = await import('../models/itineraries.model.js');
+        const doc = await Itinerary.create({
+          userId: req.userId,
+          tripId: req.params?.id || req.body?.tripId,
+          city,
+          country,
+          startDate: start,
+          endDate: end,
+          partySize,
+          preferences: {},
+          currency: 'THB',
+          days: [
+            {
+              date: start,
+              summary: 'Day 1 placeholder itinerary',
+              activities: [
+                { time: '09:00', title: 'Explore city center', type: 'sightseeing', notes: '', cost_estimate: 0, duration_minutes: 120 }
+              ],
+              daily_budget_estimate: 0
+            }
+          ],
+          totals: { estimated_total_cost: 0, attractions_count: 1, food_spots_count: 0, transport_count: 0 },
+          source: 'fallback'
+        });
+        return res.status(201).json({ itinerary: doc, source: 'fallback-saved' });
+      }
+    } catch (fallbackErr) {
+      // Continue to error middleware if fallback also fails
+      return next(fallbackErr);
+    }
+
+    // If no fallback path applied, forward the original error
     next(err);
   }
 };
