@@ -15,9 +15,9 @@ const Home = () => {
           <div className="space-x-4">
             <Link
               to="/signup"
-              className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition duration-300"
+              className="inline-block bg-blue-600 !text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition duration-300"
             >
-              Get Started
+              Signup
             </Link>
             <Link
               to="/login"

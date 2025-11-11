@@ -1,21 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AuthService from '../services/auth.service';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    // Re-read auth state on route changes so Navbar updates without full refresh
     const current = AuthService.getCurrentUser();
     setUser(current);
-  }, []);
+  }, [location]);
 
   const handleLogout = () => {
     AuthService.logout();
     setUser(null);
     navigate('/');
   };
+
+  // Hide navbar on home page regardless of auth state
+  if (location.pathname === '/') {
+    return null;
+  }
 
   return (
     <nav className="bg-white/90 backdrop-blur-sm border-b border-slate-200">
@@ -24,9 +31,6 @@ const Navbar = () => {
           Smart Tourism
         </Link>
         <ul className="flex items-center space-x-6 list-none">
-          <li>
-            <Link to="/" className="text-slate-700 hover:text-slate-900">Home</Link>
-          </li>
           {user ? (
             <>
               <li>
@@ -48,7 +52,7 @@ const Navbar = () => {
                 <Link to="/login" className="text-slate-700 hover:text-slate-900">Login</Link>
               </li>
               <li>
-                <Link to="/signup" className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Signup</Link>
+                <Link to="/signup" className="px-4 py-2 rounded-lg bg-blue-600 !text-white hover:bg-blue-700">Signup</Link>
               </li>
             </>
           )}

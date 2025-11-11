@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Chatbot from '../components/Chatbot';
 import { createTrip } from '../services/trips.service';
 
 const TripSelection = () => {
@@ -13,8 +12,7 @@ const TripSelection = () => {
     interests: []
   });
 
-  const [showChatbot, setShowChatbot] = useState(false);
-  const [createdTripId, setCreatedTripId] = useState(null);
+  // Removed chatbot; navigate directly to itineraries after creating a trip
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -40,19 +38,12 @@ const TripSelection = () => {
         endDate: tripData.endDate,
         preferences: { interests: tripData.interests, budget: tripData.budget }
       });
-      setCreatedTripId(trip._id);
-      setShowChatbot(true);
+      navigate(`/trips/${trip._id}/itineraries`);
     } catch (err) {
       console.error('Failed to create trip', err);
     }
   };
 
-  const handleGenerateItinerary = (_itinerary) => {
-    // After saving to trip, navigate to that trip's itineraries
-    if (createdTripId) {
-      navigate(`/trips/${createdTripId}/itineraries`);
-    }
-  };
 
   const interestOptions = [
     'Adventure', 'Culture', 'Food', 'History', 'Nature', 'Shopping',
@@ -68,7 +59,7 @@ const TripSelection = () => {
             <p className="text-gray-600 text-lg">Tell us about your travel preferences and we'll create a personalized itinerary</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-8">
             {/* Trip Selection Form */}
             <div className="bg-white rounded-lg shadow-lg p-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-6">Trip Details</h2>
@@ -150,52 +141,6 @@ const TripSelection = () => {
                 </button>
               </form>
 
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => setShowChatbot(!showChatbot)}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  {showChatbot ? 'Hide Chatbot' : 'Need help? Chat with our AI Assistant'}
-                </button>
-              </div>
-            </div>
-
-            {/* Chatbot */}
-            <div className="lg:sticky lg:top-8">
-              {showChatbot && (
-                <Chatbot tripId={createdTripId} onGenerateItinerary={handleGenerateItinerary} />
-              )}
-              
-              {!showChatbot && (
-                <div className="bg-white rounded-lg shadow-lg p-8">
-                  <h3 className="text-xl font-bold text-gray-800 mb-4">Why Choose Our AI Assistant?</h3>
-                  <ul className="space-y-3 text-gray-600">
-                    <li className="flex items-start space-x-2">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>Personalized recommendations based on your preferences</span>
-                    </li>
-                    <li className="flex items-start space-x-2">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>Real-time suggestions and travel tips</span>
-                    </li>
-                    <li className="flex items-start space-x-2">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>Local insights and hidden gems</span>
-                    </li>
-                    <li className="flex items-start space-x-2">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>Budget-friendly options and deals</span>
-                    </li>
-                  </ul>
-                  
-                  <button
-                    onClick={() => setShowChatbot(true)}
-                    className="w-full mt-6 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-300 font-semibold"
-                  >
-                    Start Chatting
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>
