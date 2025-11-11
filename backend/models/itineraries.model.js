@@ -59,7 +59,8 @@ const ActivitySchema = new mongoose.Schema(
     address: String,
     notes: String,
     cost_estimate: Number,   // THB
-    duration_minutes: Number
+    duration_minutes: Number,
+    completed: { type: Boolean, default: false }
   },
   { _id: false }
 );

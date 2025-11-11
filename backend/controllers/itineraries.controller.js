@@ -111,3 +111,33 @@ export const myItineraries = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getItineraryById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const doc = await Itinerary.findOne({ _id: id, userId: req.userId });
+    if (!doc) return res.status(404).json({ message: 'Itinerary not found' });
+    res.json({ itinerary: doc });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const activityUpdateSchema = z.object({
+  dayIndex: z.number().int().nonnegative(),
+  activityIndex: z.number().int().nonnegative(),
+  completed: z.boolean(),
+});
+
+export const updateActivityCompletion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { dayIndex, activityIndex, completed } = activityUpdateSchema.parse(req.body);
+    const path = `days.${dayIndex}.activities.${activityIndex}.completed`;
+    const result = await Itinerary.updateOne({ _id: id, userId: req.userId }, { $set: { [path]: completed } });
+    if (result.matchedCount === 0) return res.status(404).json({ message: 'Itinerary not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};

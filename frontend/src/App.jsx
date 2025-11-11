@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import TripSelection from './pages/TripSelection';
 import Itineraries from './pages/Itineraries';
 import Trips from './pages/Trips';
+import ItineraryDetail from './pages/ItineraryDetail';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/trip-selection" element={<TripSelection />} />
         <Route path="/itineraries" element={<Itineraries />} />
         <Route path="/trips/:tripId/itineraries" element={<Itineraries />} />
+        <Route path="/itineraries/:itineraryId" element={<ItineraryDetail />} />
       </Routes>
     </Router>
   );
