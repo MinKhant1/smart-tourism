@@ -56,7 +56,10 @@ const ItineraryDetail = () => {
           <div className="space-y-8">
             {itinerary.days?.map((day, dayIdx) => (
               <div key={dayIdx} className="border-t pt-6">
-                <h2 className="text-xl font-semibold text-slate-800 mb-4">{day.date} — {day.summary}</h2>
+                <h2 className="text-xl font-semibold text-slate-800 mb-4">
+                  <span className="inline-block mr-2 px-2 py-1 rounded bg-slate-100 text-slate-700 text-sm">Day {dayIdx + 1}</span>
+                  {day.date} — {day.summary}
+                </h2>
                 <ul className="space-y-3">
                   {day.activities?.map((act, actIdx) => (
                     <li key={actIdx} className="flex items-start gap-3">
@@ -67,7 +70,12 @@ const ItineraryDetail = () => {
                         className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
                       <div className="flex-1">
-                        <div className="font-medium text-slate-900">{act.title}</div>
+                        <div className="font-medium text-slate-900">
+                          <span className="inline-flex items-center justify-center mr-2 w-6 h-6 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">
+                            {actIdx + 1}
+                          </span>
+                          {act.title}
+                        </div>
                         <div className="text-sm text-slate-600">{act.time} · {act.type}</div>
                         {act.notes && <div className="text-sm text-slate-500">{act.notes}</div>}
                       </div>
