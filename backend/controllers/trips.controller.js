@@ -3,6 +3,7 @@ import { Trip } from '../models/trip.model.js';
 import mongoose from 'mongoose';
 import { Itinerary } from '../models/itineraries.model.js';
 import { planTripFromText as planTextController } from './itineraryText.controller.js';
+import { ChatMessage } from '../models/chatMessage.model.js';
 import { askPerplexity } from '../lib/perplexity.js';
 
 const createSchema = z.object({
@@ -166,6 +167,15 @@ export const chatForTrip = async (req, res, next) => {
     }
 
     const reply = typeof content === 'string' ? content.trim() : String(content ?? '');
+
+    // Persist chat messages (user then assistant)
+    try {
+      await ChatMessage.create({ userId: req.userId, tripId: id, role: 'user', content: message });
+      await ChatMessage.create({ userId: req.userId, tripId: id, role: 'assistant', content: reply });
+    } catch (saveErr) {
+      console.warn('[Trips] chat save failed', saveErr?.message || saveErr);
+    }
+
     return res.status(200).json({ reply });
   } catch (err) {
     console.error('[Trips] chat error', err);
@@ -181,5 +191,21 @@ If you want a full day-by-day plan, use "New Itinerary with AI".`;
     } catch {
       return next(err);
     }
+  }
+};
+
+// Return chat history for a trip for the current user
+export const chatHistoryForTrip = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid trip id' });
+    }
+    const items = await ChatMessage.find({ userId: req.userId, tripId: id })
+      .sort({ createdAt: 1 })
+      .select({ role: 1, content: 1, createdAt: 1, _id: 0 });
+    return res.json({ items });
+  } catch (err) {
+    next(err);
   }
 };

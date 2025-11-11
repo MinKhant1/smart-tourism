@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { planTripFromText } from '../services/itineraryText.service';
 import { planTripFromTextForTrip } from '../services/trips.service';
-import { sendTripChat } from '../services/chat.service';
+import { sendTripChat, getTripChatHistory } from '../services/chat.service';
 
 const Chatbot = ({ onGenerateItinerary, tripId }) => {
   const [messages, setMessages] = useState([
@@ -9,6 +9,22 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+  // Load persisted chat history for this trip (if any)
+  React.useEffect(() => {
+    (async () => {
+      try {
+        if (!tripId) return;
+        const items = await getTripChatHistory(tripId);
+        if (items.length > 0) {
+          const mapped = items.map((m) => ({ type: m.role === 'assistant' ? 'bot' : 'user', text: m.content }));
+          setMessages(mapped);
+        }
+      } catch (err) {
+        console.warn('Failed to load chat history', err);
+      }
+    })();
+  }, [tripId]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
