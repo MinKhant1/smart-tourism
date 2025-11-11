@@ -111,3 +111,71 @@ export const myItineraries = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getItineraryById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const doc = await Itinerary.findOne({ _id: id, userId: req.userId });
+    if (!doc) return res.status(404).json({ message: 'Itinerary not found' });
+    res.json({ itinerary: doc });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const activityUpdateSchema = z.object({
+  dayIndex: z.number().int().nonnegative(),
+  activityIndex: z.number().int().nonnegative(),
+  completed: z.boolean(),
+});
+
+export const updateActivityCompletion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { dayIndex, activityIndex, completed } = activityUpdateSchema.parse(req.body);
+    const path = `days.${dayIndex}.activities.${activityIndex}.completed`;
+    const result = await Itinerary.updateOne({ _id: id, userId: req.userId }, { $set: { [path]: completed } });
+    if (result.matchedCount === 0) return res.status(404).json({ message: 'Itinerary not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update specific fields of an activity (title, time, type, etc.)
+const activityDetailsSchema = z.object({
+  dayIndex: z.number().int().nonnegative(),
+  activityIndex: z.number().int().nonnegative(),
+  title: z.string().min(1).optional(),
+  time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  type: z.enum(['sightseeing','food','transport','shopping','nightlife','other']).optional(),
+  address: z.string().optional(),
+  notes: z.string().optional(),
+  cost_estimate: z.number().nonnegative().optional(),
+  duration_minutes: z.number().int().nonnegative().optional(),
+});
+
+export const updateActivityDetails = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const payload = activityDetailsSchema.parse(req.body);
+    const { dayIndex, activityIndex, ...fields } = payload;
+
+    const setObj = {};
+    for (const [key, value] of Object.entries(fields)) {
+      if (typeof value === 'undefined') continue;
+      const path = `days.${dayIndex}.activities.${activityIndex}.${key}`;
+      setObj[path] = value;
+    }
+
+    if (Object.keys(setObj).length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    const result = await Itinerary.updateOne({ _id: id, userId: req.userId }, { $set: setObj });
+    if (result.matchedCount === 0) return res.status(404).json({ message: 'Itinerary not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
