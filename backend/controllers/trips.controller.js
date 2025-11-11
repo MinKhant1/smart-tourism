@@ -96,10 +96,34 @@ export const planTextForTrip = async (req, res, next) => {
     const trip = await Trip.findOne({ _id: id, userId: req.userId });
     if (!trip) return res.status(404).json({ message: 'Trip not found' });
 
+    // Infer country from city when possible; keep a sensible fallback
+    const cityLc = String(trip.city || '').toLowerCase();
+    const cityToCountry = {
+      'bangkok': 'Thailand',
+      'chiang mai': 'Thailand',
+      'phuket': 'Thailand',
+      'pattaya': 'Thailand',
+      'ayutthaya': 'Thailand',
+      'yangon': 'Myanmar',
+      'naypyidaw': 'Myanmar',
+      'mandalay': 'Myanmar',
+      'hong kong': 'China',
+      'tokyo': 'Japan',
+      'seoul': 'South Korea',
+      'singapore': 'Singapore',
+      'kuala lumpur': 'Malaysia',
+      'hanoi': 'Vietnam',
+      'ho chi minh city': 'Vietnam',
+      'taipei': 'Taiwan',
+      'manila': 'Philippines',
+    };
+    const inferredCountry = cityToCountry[cityLc] || undefined;
+
     // Use trip data as defaults so user doesn't need to re-enter
     const defaults = {
       defaultCity: trip.city,
-      defaultCountry: 'Thailand', // adjust if you add country to Trip
+      // If we can infer country, pass it; otherwise omit to let AI deduce from city
+      ...(inferredCountry ? { defaultCountry: inferredCountry } : {}),
       defaultPartySize: 2,
       startDate: trip.startDate,
       endDate: trip.endDate,

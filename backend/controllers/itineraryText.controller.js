@@ -62,7 +62,7 @@ const itineraryJsonSchema = {
 function systemPrompt() {
   return `You are a travel planner. Return ONLY JSON that matches the given JSON Schema.
 - Currency must be THB.
-- City logistics: Bangkok example should favor BTS/MRT/walking.
+- Destination is provided via defaults; tailor transport/logistics to that city.
 - Cover EVERY day from startDate to endDate inclusive.
 - Cluster nearby attractions, be realistic with time & costs.
 - No explanations, no code fences, JSON only.`;
@@ -99,11 +99,12 @@ export const planTripFromText = async (req, res, next) => {
 Trip dates: ${startDate || 'UNKNOWN'} to ${endDate || 'UNKNOWN'} (cover EVERY date inclusive; do NOT shorten).
 Defaults:
 - city: ${defaultCity}
-- country: ${defaultCountry}
+- country: ${defaultCountry || 'UNKNOWN'}
 - partySize: ${defaultPartySize}
 - currency: THB
 Rules:
 - Use provided startDate/endDate if present; ignore conflicting dates in the text.
+- Use provided defaultCity/country as the destination; ignore conflicting locations.
 - Return ONLY JSON matching the schema.`
     };
 
@@ -224,8 +225,9 @@ Rules:
       const doc = await Itinerary.create({
         userId: req.userId,
         tripId: req.params?.id || req.body?.tripId,
-        city: json.city,
-        country: json.country,
+        // Force destination to the trip/defaults to avoid LLM drifting
+        city: (req.body?.defaultCity ?? json.city ?? ''),
+        country: (req.body?.defaultCountry ?? json.country ?? ''),
         startDate: useStart || json.startDate,
         endDate: useEnd || json.endDate,
         partySize: json.partySize,
@@ -235,7 +237,7 @@ Rules:
         totals: json.totals,
         source: 'perplexity:sonar'
       });
-      console.log('[ItineraryText] Saved itinerary', { id: doc._id, tripId: doc.tripId });
+      console.log('[ItineraryText] Saved itinerary', { id: doc._id, tripId: doc.tripId, city: doc.city, country: doc.country });
       return res.status(201).json({ itinerary: doc, source: 'saved' });
     }
 

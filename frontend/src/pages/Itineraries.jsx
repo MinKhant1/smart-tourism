@@ -198,7 +198,7 @@ const Itineraries = () => {
                 <span className="text-sm text-gray-500">
                   Created: {new Date(itinerary.createdAt).toLocaleDateString()}
                 </span>
-                <Link to={`/itineraries/${itinerary.id}`} className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300 font-semibold">
+                <Link to={tripId ? `/trips/${tripId}/itinerary/${itinerary.id}` : `/itineraries/${itinerary.id}`} className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300 font-semibold">
                   View Details
                 </Link>
               </div>

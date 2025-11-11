@@ -1,25 +1,46 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getItinerary, setActivityCompleted } from '../services/itineraries.service';
+import { getTripSingleItinerary } from '../services/trips.service';
 
 const ItineraryDetail = () => {
-  const { itineraryId } = useParams();
+  const { tripId, itineraryId } = useParams();
+  const navigate = useNavigate();
   const [itinerary, setItinerary] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
 
   React.useEffect(() => {
     (async () => {
+      setLoading(true);
+      setError(null);
       try {
         const data = await getItinerary(itineraryId);
         setItinerary(data);
       } catch (e) {
-        setError('Failed to load itinerary');
+        // If the specific itinerary id no longer exists, try the trip's latest itinerary
+        try {
+          if (tripId) {
+            const latest = await getTripSingleItinerary(tripId);
+            if (latest && latest._id && latest._id !== itineraryId) {
+              const data = await getItinerary(latest._id);
+              setItinerary(data);
+              // Navigate to the current itinerary id to avoid future stale links
+              navigate(`/trips/${tripId}/itinerary/${latest._id}`, { replace: true });
+            } else {
+              setError('No itinerary found for this trip');
+            }
+          } else {
+            setError('Failed to load itinerary');
+          }
+        } catch (fallbackErr) {
+          setError('Failed to load itinerary');
+        }
       } finally {
         setLoading(false);
       }
     })();
-  }, [itineraryId]);
+  }, [tripId, itineraryId, navigate]);
 
   const toggleActivity = async (dayIdx, actIdx) => {
     try {

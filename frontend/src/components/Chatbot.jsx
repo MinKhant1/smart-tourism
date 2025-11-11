@@ -146,11 +146,8 @@ const Chatbot = ({ onGenerateItinerary, tripId, itineraryId }) => {
       const query = lastUser?.text || 'Plan a 3-day trip to Bangkok for 2 people';
       let itinerary;
       if (tripId) {
-        itinerary = await planTripFromTextForTrip(tripId, query, {
-          defaultCity: 'Bangkok',
-          defaultCountry: 'Thailand',
-          defaultPartySize: 2,
-        });
+        // Use the trip-scoped endpoint without overriding defaults; backend uses trip.city
+        itinerary = await planTripFromTextForTrip(tripId, query);
       } else {
         itinerary = await planTripFromText(query, {
           defaultCity: 'Bangkok',
