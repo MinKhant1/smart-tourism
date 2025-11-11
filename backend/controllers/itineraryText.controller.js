@@ -75,6 +75,15 @@ export const planTripFromText = async (req, res, next) => {
       return res.status(400).json({ message: 'Body must include "query": string' });
     }
 
+    console.log('[ItineraryText] Incoming plan-text', {
+      userId: req.userId,
+      tripId: req.params?.id || req.body?.tripId,
+      defaultCity,
+      defaultCountry,
+      defaultPartySize,
+      save
+    });
+
     const userMsg = {
       role: 'user',
       content:
@@ -98,7 +107,77 @@ Return ONLY JSON matching the schema.`
     });
 
     // Perplexity returns valid JSON text per schema; still parse defensively
-    const json = JSON.parse(content);
+    const json = typeof content === 'string' ? JSON.parse(content) : content;
+    console.log('[ItineraryText] Parsed JSON from LLM', { daysCount: json?.days?.length, city: json?.city, source: 'perplexity' });
+
+    // Normalize activities: Some LLM outputs may embed activities as a stringified block.
+    const normalizeActivities = (acts) => {
+      const toObj = (maybe) => {
+        if (maybe && typeof maybe === 'object') return maybe;
+        if (typeof maybe === 'string') {
+          const s = maybe.trim();
+          try {
+            let r = s.replace(/```json|```/gi, '').trim();
+            // If this looks like an entire array string, parse and take first element
+            if (r.startsWith('[')) {
+              r = r.replace(/'/g, '"');
+              r = r.replace(/(\btime\b|\btitle\b|\btype\b|\baddress\b|\bnotes\b|\bcost_estimate\b|\bduration_minutes\b)\s*:/g, '"$1":');
+              const arr = JSON.parse(r);
+              if (Array.isArray(arr) && arr[0] && typeof arr[0] === 'object') return arr[0];
+            } else {
+              // Parse single object-like text
+              if (!r.startsWith('{') && r.includes('{')) {
+                // Trim any leading text before first brace
+                r = r.slice(r.indexOf('{'));
+              }
+              r = r.replace(/'/g, '"');
+              r = r.replace(/(\btime\b|\btitle\b|\btype\b|\baddress\b|\bnotes\b|\bcost_estimate\b|\bduration_minutes\b)\s*:/g, '"$1":');
+              const obj = JSON.parse(r);
+              if (obj && typeof obj === 'object') return obj;
+            }
+          } catch {}
+        }
+        // Fallback minimal object
+        const text = typeof maybe === 'string' ? maybe : '';
+        return { time: '', title: text.slice(0, 140), type: 'other', address: '', notes: text, cost_estimate: 0, duration_minutes: 0 };
+      };
+
+      if (Array.isArray(acts)) {
+        return acts.map((a) => toObj(a)).filter((x) => x && typeof x === 'object');
+      }
+
+      if (typeof acts === 'string') {
+        const s = acts.trim();
+        try {
+          let r = s.replace(/```json|```/gi, '').trim();
+          if (!r.startsWith('[')) r = `[${r}]`;
+          r = r.replace(/'/g, '"');
+          r = r.replace(/(\btime\b|\btitle\b|\btype\b|\baddress\b|\bnotes\b|\bcost_estimate\b|\bduration_minutes\b)\s*:/g, '"$1":');
+          const arr = JSON.parse(r);
+          if (Array.isArray(arr)) return arr.map((a) => toObj(a));
+        } catch {}
+        return [toObj(s)];
+      }
+
+      return [];
+    };
+
+    const normalizedDays = Array.isArray(json.days)
+      ? json.days.map((d, idx) => {
+          const activities = normalizeActivities(d?.activities);
+          return {
+            date: d?.date || json.startDate || `Day ${idx + 1}`,
+            summary: d?.summary || '',
+            activities,
+            daily_budget_estimate: typeof d?.daily_budget_estimate === 'number' ? d.daily_budget_estimate : 0
+          };
+        })
+      : [];
+
+    console.log('[ItineraryText] Normalized first day sample', {
+      hasDays: normalizedDays.length > 0,
+      firstActivitiesType: Array.isArray(normalizedDays[0]?.activities) ? typeof normalizedDays[0]?.activities[0] : null
+    });
 
     // optional: persist under current user if save=true and you have auth in place
     if (save && req.userId) {
@@ -113,16 +192,18 @@ Return ONLY JSON matching the schema.`
         partySize: json.partySize,
         preferences: {}, // unknown from free text; store later if needed
         currency: json.currency || 'THB',
-        days: json.days,
+        days: normalizedDays,
         totals: json.totals,
         source: 'perplexity:sonar'
       });
+      console.log('[ItineraryText] Saved itinerary', { id: doc._id, tripId: doc.tripId });
       return res.status(201).json({ itinerary: doc, source: 'saved' });
     }
 
     // return raw JSON itinerary without saving
     return res.status(200).json({ itinerary: json, source: 'perplexity' });
   } catch (err) {
+    console.error('[ItineraryText] plan-text error', err);
     // If Perplexity failed or API key is missing, attempt a graceful fallback.
     try {
       const cleaned = (err?.message?.includes('Unexpected token') && err?.content)
@@ -170,6 +251,7 @@ Return ONLY JSON matching the schema.`
           totals: { estimated_total_cost: 0, attractions_count: 1, food_spots_count: 0, transport_count: 0 },
           source: 'fallback'
         });
+        console.log('[ItineraryText] Fallback saved itinerary', { id: doc._id, tripId: doc.tripId });
         return res.status(201).json({ itinerary: doc, source: 'fallback-saved' });
       }
     } catch (fallbackErr) {

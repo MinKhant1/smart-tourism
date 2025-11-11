@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Trip } from '../models/trip.model.js';
+import mongoose from 'mongoose';
 import { Itinerary } from '../models/itineraries.model.js';
 import { planTripFromText as planTextController } from './itineraryText.controller.js';
 
@@ -52,7 +53,11 @@ export const itinerariesByTrip = async (req, res, next) => {
 // Wrap text planning to force save to this trip
 export const planTextForTrip = async (req, res, next) => {
   try {
-    const trip = await Trip.findOne({ _id: req.params.id, userId: req.userId });
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid trip id' });
+    }
+    const trip = await Trip.findOne({ _id: id, userId: req.userId });
     if (!trip) return res.status(404).json({ message: 'Trip not found' });
 
     // Use trip data as defaults so user doesn't need to re-enter
@@ -65,8 +70,10 @@ export const planTextForTrip = async (req, res, next) => {
     };
 
     req.body = { ...req.body, ...defaults, save: true };
+    console.log('[Trips] plan-text for trip', { tripId: id, defaults, hasQuery: typeof req.body?.query === 'string' });
     return planTextController(req, res, next);
   } catch (err) {
+    console.error('[Trips] plan-text error', err);
     next(err);
   }
 };
