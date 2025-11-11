@@ -19,15 +19,15 @@ const Navbar = () => {
     navigate('/');
   };
 
-  // Hide navbar on home page regardless of auth state
-  if (location.pathname === '/') {
+  // Hide navbar on home page only when logged out
+  if (location.pathname === '/' && !user) {
     return null;
   }
 
   return (
     <nav className="bg-white/90 backdrop-blur-sm border-b border-slate-200">
       <div className="container mx-auto flex justify-between items-center py-4">
-        <Link to="/" className="text-slate-900 text-2xl font-bold">
+        <Link to={user ? "/trips" : "/"} className="text-slate-900 text-2xl font-bold">
           Smart Tourism
         </Link>
         <ul className="flex items-center space-x-6 list-none">

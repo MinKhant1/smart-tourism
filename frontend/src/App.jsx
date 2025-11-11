@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -12,13 +12,18 @@ import ItineraryDetail from './pages/ItineraryDetail';
 import TripLayout from './pages/TripLayout';
 import TripOverview from './pages/TripOverview';
 import TripAiAssist from './pages/TripAiAssist';
+import AuthService from './services/auth.service';
 
 function App() {
+  const Root = () => {
+    const token = localStorage.getItem('token');
+    return token ? <Navigate to="/trips" replace /> : <Home />;
+  };
   return (
     <Router>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Root />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/profile" element={<Profile />} />
