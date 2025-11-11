@@ -26,12 +26,31 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
     })();
   }, [tripId]);
 
+  // Detect commands that should trigger itinerary generation
+  const isGenerateCommand = (text) => {
+    const t = String(text || '').trim().toLowerCase();
+    return (
+      t.includes('create itinerary') ||
+      t.includes('create itineraries') ||
+      t.startsWith('generate itinerary') ||
+      t === 'generate itinerary'
+    );
+  };
+
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
     const userMessage = { type: 'user', text: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    // Intercept generation keywords and trigger itinerary creation instead of regular chat
+    if (isGenerateCommand(userMessage.text)) {
+      setIsTyping(true);
+      setMessages(prev => [...prev, { type: 'bot', text: 'Got it — generating your itinerary now…' }]);
+      await handleGenerateItinerary();
+      return;
+    }
+
     setIsTyping(true);
     try {
       // Build chat history for backend (user/assistant roles)
@@ -50,7 +69,9 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
     try {
       setIsTyping(true);
       // Compose a simple query from last user message or default prompt
-      const lastUser = [...messages].reverse().find(m => m.type === 'user');
+      const lastUser = [...messages]
+        .reverse()
+        .find(m => m.type === 'user' && !isGenerateCommand(m.text));
       const query = lastUser?.text || 'Plan a 3-day trip to Bangkok for 2 people';
       let itinerary;
       if (tripId) {
