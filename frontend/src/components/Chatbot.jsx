@@ -68,7 +68,9 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
         });
       }
       setIsTyping(false);
-      onGenerateItinerary(itinerary);
+      if (typeof onGenerateItinerary === 'function') {
+        onGenerateItinerary(itinerary);
+      }
     } catch (err) {
       console.error('Chatbot generation failed, using fallback', err);
       setIsTyping(false);
@@ -82,7 +84,9 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
         ],
         totals: { estimated_total_cost: 300 }
       };
-      onGenerateItinerary(fallback);
+      if (typeof onGenerateItinerary === 'function') {
+        onGenerateItinerary(fallback);
+      }
     }
   };
 
@@ -137,12 +141,14 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
         </button>
       </div>
       
-      <button
-        onClick={handleGenerateItinerary}
-        className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-300"
-      >
-        Generate Itinerary
-      </button>
+      {typeof onGenerateItinerary === 'function' && (
+        <button
+          onClick={handleGenerateItinerary}
+          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-300"
+        >
+          Generate Itinerary
+        </button>
+      )}
     </div>
   );
 };

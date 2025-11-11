@@ -22,6 +22,11 @@ export const getTripItineraries = async (tripId) => {
   return data.items;
 };
 
+export const getTrip = async (tripId) => {
+  const { data } = await axios.get(`${API_BASE}/trips/${tripId}`, { headers: authHeaders() });
+  return data.trip;
+};
+
 export const planTripFromTextForTrip = async (tripId, query, options = {}) => {
   const payload = { query, ...options };
   const { data } = await axios.post(`${API_BASE}/trips/${tripId}/plan-text`, payload, { headers: authHeaders() });
@@ -33,4 +38,5 @@ export default {
   createTrip,
   getTripItineraries,
   planTripFromTextForTrip,
+  getTrip,
 };

@@ -49,7 +49,7 @@ const Trips = () => {
               <div
                 key={trip._id}
                 className="relative rounded-xl overflow-hidden cursor-pointer group shadow hover:shadow-xl transition"
-                onClick={() => navigate(`/trips/${trip._id}/itineraries`)}
+                onClick={() => navigate(`/trips/${trip._id}`)}
               >
                 {/* Image layer with graceful fallback */}
                 <img

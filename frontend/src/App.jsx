@@ -9,6 +9,8 @@ import TripSelection from './pages/TripSelection';
 import Itineraries from './pages/Itineraries';
 import Trips from './pages/Trips';
 import ItineraryDetail from './pages/ItineraryDetail';
+import TripLayout from './pages/TripLayout';
+import TripOverview from './pages/TripOverview';
 
 function App() {
   return (
@@ -21,8 +23,13 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/trip-selection" element={<TripSelection />} />
+        {/* Nested trip routes: default Overview, plus Itinerary */}
+        <Route path="/trips/:tripId" element={<TripLayout />}>
+          <Route index element={<TripOverview />} />
+          <Route path="itineraries" element={<Itineraries />} />
+        </Route>
+        {/* Legacy routes remain available */}
         <Route path="/itineraries" element={<Itineraries />} />
-        <Route path="/trips/:tripId/itineraries" element={<Itineraries />} />
         <Route path="/itineraries/:itineraryId" element={<ItineraryDetail />} />
       </Routes>
     </Router>
