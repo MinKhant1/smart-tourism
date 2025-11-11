@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { listMyTrips } from '../services/trips.service';
+import { cityImageEndpointUrl } from '../services/images.service';
 
 const Trips = () => {
   const [trips, setTrips] = useState([]);
@@ -40,13 +41,41 @@ const Trips = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {trips.map((trip) => (
-            <div key={trip._id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer" onClick={() => navigate(`/trips/${trip._id}/itineraries`)}>
-              <h2 className="text-xl font-bold text-gray-800 mb-1">{trip.name || trip.city}</h2>
-              <p className="text-gray-600 mb-1">{trip.city}</p>
-              <p className="text-gray-600">{trip.startDate} to {trip.endDate}</p>
-            </div>
-          ))}
+          {trips.map((trip) => {
+            const title = trip.name || trip.city || 'Trip';
+            const city = trip.city || title;
+            const imgUrl = cityImageEndpointUrl(city, 900, 600);
+            return (
+              <div
+                key={trip._id}
+                className="relative rounded-xl overflow-hidden cursor-pointer group shadow hover:shadow-xl transition"
+                onClick={() => navigate(`/trips/${trip._id}/itineraries`)}
+              >
+                {/* Image layer with graceful fallback */}
+                <img
+                  src={imgUrl}
+                  alt={city}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                {/* Maintain aspect by spacer */}
+                <div className="h-40 sm:h-48 md:h-56" />
+                {/* Gradient overlay for readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pointer-events-none" />
+                {/* Content */}
+                <div className="absolute inset-0 p-5 flex flex-col justify-end">
+                  <h2 className="text-white text-xl font-semibold drop-shadow-sm">
+                    {title}
+                  </h2>
+                  <p className="text-white/90 text-sm drop-shadow-sm">{city}</p>
+                  <div className="mt-2 inline-flex items-center gap-2">
+                    <span className="text-white/90 text-xs bg-white/10 px-2 py-1 rounded-full backdrop-blur-sm">
+                      {trip.startDate} to {trip.endDate}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {trips.length === 0 && (
