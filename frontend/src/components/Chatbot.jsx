@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { planTripFromText } from '../services/itineraryText.service';
 import { planTripFromTextForTrip } from '../services/trips.service';
+import { sendTripChat } from '../services/chat.service';
 
 const Chatbot = ({ onGenerateItinerary, tripId }) => {
   const [messages, setMessages] = useState([
@@ -16,20 +17,17 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
-
-    // Simulate bot response
-    setTimeout(() => {
-      const responses = [
-        'Great choice! Based on your preferences, I\'ll suggest some amazing activities.',
-        'That sounds wonderful! Let me find the best options for you.',
-        'Excellent! I have some perfect recommendations based on what you\'ve told me.',
-        'I understand your preferences. Let me create a customized itinerary for you.'
-      ];
-      
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      setMessages(prev => [...prev, { type: 'bot', text: randomResponse }]);
+    try {
+      // Build chat history for backend (user/assistant roles)
+      const history = messages.map(m => ({ role: m.type === 'bot' ? 'assistant' : 'user', content: m.text }));
+      const { reply } = await sendTripChat(tripId, userMessage.text, history);
+      setMessages(prev => [...prev, { type: 'bot', text: reply }]);
       setIsTyping(false);
-    }, 1500);
+    } catch (err) {
+      console.error('Chatbot message failed', err);
+      setMessages(prev => [...prev, { type: 'bot', text: 'Sorry, I had trouble answering that. Please try again.' }]);
+      setIsTyping(false);
+    }
   };
 
   const handleGenerateItinerary = async () => {
