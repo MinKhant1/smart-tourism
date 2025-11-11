@@ -53,6 +53,39 @@ export const itinerariesByTrip = async (req, res, next) => {
   }
 };
 
+// Ensure a single itinerary per trip: keep latest, delete older ones, and return the kept itinerary
+export const singleItineraryForTrip = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid trip id' });
+    }
+
+    const trip = await Trip.findOne({ _id: id, userId: req.userId });
+    if (!trip) return res.status(404).json({ message: 'Trip not found' });
+
+    const items = await Itinerary.find({ userId: req.userId, tripId: id }).sort({ createdAt: -1 });
+    if (!items || items.length === 0) {
+      return res.status(404).json({ message: 'No itinerary for this trip' });
+    }
+
+    const keep = items[0];
+    const toDeleteIds = items.slice(1).map((x) => x._id);
+    if (toDeleteIds.length) {
+      try {
+        await Itinerary.deleteMany({ _id: { $in: toDeleteIds }, userId: req.userId });
+        console.log('[Trips] Deleted older itineraries for trip', { tripId: id, deleted: toDeleteIds.length });
+      } catch (delErr) {
+        console.warn('[Trips] Failed to delete older itineraries', delErr?.message || delErr);
+      }
+    }
+
+    return res.json({ itinerary: keep });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Wrap text planning to force save to this trip
 export const planTextForTrip = async (req, res, next) => {
   try {

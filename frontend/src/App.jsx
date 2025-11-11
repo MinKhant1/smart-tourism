@@ -11,6 +11,7 @@ import Trips from './pages/Trips';
 import ItineraryDetail from './pages/ItineraryDetail';
 import TripLayout from './pages/TripLayout';
 import TripOverview from './pages/TripOverview';
+import TripAiAssist from './pages/TripAiAssist';
 
 function App() {
   return (
@@ -23,10 +24,12 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/trip-selection" element={<TripSelection />} />
-        {/* Nested trip routes: default Overview, plus Itinerary */}
+        {/* Nested trip routes: default Overview, plus Itinerary and AI Assist */}
         <Route path="/trips/:tripId" element={<TripLayout />}>
           <Route index element={<TripOverview />} />
           <Route path="itineraries" element={<Itineraries />} />
+          <Route path="itinerary/:itineraryId" element={<ItineraryDetail />} />
+          <Route path="assist" element={<TripAiAssist />} />
         </Route>
         {/* Legacy routes remain available */}
         <Route path="/itineraries" element={<Itineraries />} />

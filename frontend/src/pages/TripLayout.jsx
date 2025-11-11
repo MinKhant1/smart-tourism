@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
-import { getTrip } from '../services/trips.service';
+import { getTrip, getTripSingleItinerary } from '../services/trips.service';
 import { cityImageEndpointUrl } from '../services/images.service';
-import Chatbot from '../components/Chatbot';
 
 const TabLink = ({ to, active, children }) => (
   <Link
@@ -33,7 +32,8 @@ const TripLayout = () => {
   const [trip, setTrip] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
-  const [showChatbot, setShowChatbot] = React.useState(false);
+  const [itineraryId, setItineraryId] = React.useState(null);
+  // Chatbot moved to dedicated AI Assist page; no local toggle state
 
   React.useEffect(() => {
     (async () => {
@@ -44,6 +44,17 @@ const TripLayout = () => {
         setError('Failed to load trip');
       } finally {
         setLoading(false);
+      }
+    })();
+  }, [tripId]);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const itinerary = await getTripSingleItinerary(tripId);
+        setItineraryId(itinerary?._id || null);
+      } catch {
+        setItineraryId(null);
       }
     })();
   }, [tripId]);
@@ -80,19 +91,14 @@ const TripLayout = () => {
       <div className="container mx-auto px-4 mt-6">
         <div className="flex gap-3 mb-6 items-center">
           <TabLink to={`/trips/${tripId}`} active={location.pathname === `/trips/${tripId}`}>Overview</TabLink>
-          <TabLink to={`/trips/${tripId}/itineraries`} active={location.pathname.startsWith(`/trips/${tripId}/itineraries`)}>Itinerary</TabLink>
-
-          {/* Tab-style button for AI Assist, placed next to tabs */}
-          <TabButton active={showChatbot} onClick={() => setShowChatbot((v) => !v)}>
-            AI Assist
-          </TabButton>
+          <TabLink
+            to={itineraryId ? `/trips/${tripId}/itinerary/${itineraryId}` : `/trips/${tripId}/itineraries`}
+            active={location.pathname.startsWith(`/trips/${tripId}/itinerary`) || location.pathname.startsWith(`/trips/${tripId}/itineraries`)}
+          >
+            Itinerary
+          </TabLink>
+          <TabLink to={`/trips/${tripId}/assist`} active={location.pathname.startsWith(`/trips/${tripId}/assist`)}>AI Assist</TabLink>
         </div>
-
-        {showChatbot && (
-          <div className="mb-6">
-            <Chatbot tripId={trip._id} />
-          </div>
-        )}
 
         <Outlet context={{ trip }} />
       </div>
