@@ -18,4 +18,10 @@ export const setActivityCompleted = async (itineraryId, dayIndex, activityIndex,
   return data.ok === true;
 };
 
-export default { getItinerary, setActivityCompleted };
+export const updateActivityDetails = async (itineraryId, dayIndex, activityIndex, fields) => {
+  const payload = { dayIndex, activityIndex, ...fields };
+  const { data } = await axios.patch(`${API_BASE}/itineraries/${itineraryId}/activity`, payload, { headers: authHeaders() });
+  return data.ok === true;
+};
+
+export default { getItinerary, setActivityCompleted, updateActivityDetails };

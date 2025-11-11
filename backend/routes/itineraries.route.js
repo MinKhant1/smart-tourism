@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { planTrip, myItineraries, getItineraryById, updateActivityCompletion } from '../controllers/itineraries.controller.js';
+import { planTrip, myItineraries, getItineraryById, updateActivityCompletion, updateActivityDetails } from '../controllers/itineraries.controller.js';
 import { auth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { z } from 'zod';
@@ -19,5 +19,6 @@ router.post('/plan', auth, validate(planSchema), planTrip);
 router.get('/mine', auth, myItineraries);
 router.get('/:id', auth, getItineraryById);
 router.patch('/:id/activities', auth, updateActivityCompletion);
+router.patch('/:id/activity', auth, updateActivityDetails);
 
 export default router;

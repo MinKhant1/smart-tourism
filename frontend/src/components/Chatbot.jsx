@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { planTripFromText } from '../services/itineraryText.service';
 import { planTripFromTextForTrip } from '../services/trips.service';
 import { sendTripChat, getTripChatHistory } from '../services/chat.service';
+import { setActivityCompleted, updateActivityDetails } from '../services/itineraries.service';
 
-const Chatbot = ({ onGenerateItinerary, tripId }) => {
+const Chatbot = ({ onGenerateItinerary, tripId, itineraryId }) => {
   const [messages, setMessages] = useState([
     { type: 'bot', text: 'Hello! I\'m your travel assistant. Let me help you create the perfect itinerary. What kind of activities are you most interested in?' }
   ]);
@@ -37,6 +38,36 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
     );
   };
 
+  const parseCompleteCommand = (text) => {
+    const t = String(text || '').trim().toLowerCase();
+    // mark/check day X activity Y done
+    const doneMatch = t.match(/^(mark|check)\s+day\s+(\d+)\s+activity\s+(\d+)\s+(done|complete|completed|checked)$/);
+    const undoMatch = t.match(/^(unmark|uncheck)\s+day\s+(\d+)\s+activity\s+(\d+)$/);
+    if (doneMatch) {
+      return { dayIndex: Number(doneMatch[2]) - 1, activityIndex: Number(doneMatch[3]) - 1, completed: true };
+    }
+    if (undoMatch) {
+      return { dayIndex: Number(undoMatch[2]) - 1, activityIndex: Number(undoMatch[3]) - 1, completed: false };
+    }
+    return null;
+  };
+
+  const parseReplaceTitleCommand = (text) => {
+    const t = String(text || '');
+    const m = t.match(/^(replace|update|edit)\s+day\s+(\d+)\s+activity\s+(\d+)\s+(?:with\s+)?(.+)$/i);
+    if (!m) return null;
+    return { dayIndex: Number(m[2]) - 1, activityIndex: Number(m[3]) - 1, title: m[4].trim() };
+  };
+
+  const parseSetFieldCommands = (text) => {
+    const t = String(text || '');
+    const time = t.match(/^set\s+day\s+(\d+)\s+activity\s+(\d+)\s+time\s+(\d{2}:\d{2})$/i);
+    if (time) return { dayIndex: Number(time[1]) - 1, activityIndex: Number(time[2]) - 1, time: time[3] };
+    const type = t.match(/^set\s+day\s+(\d+)\s+activity\s+(\d+)\s+type\s+(sightseeing|food|transport|shopping|nightlife|other)$/i);
+    if (type) return { dayIndex: Number(type[1]) - 1, activityIndex: Number(type[2]) - 1, type: type[3].toLowerCase() };
+    return null;
+  };
+
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
@@ -49,6 +80,37 @@ const Chatbot = ({ onGenerateItinerary, tripId }) => {
       setMessages(prev => [...prev, { type: 'bot', text: 'Got it — generating your itinerary now…' }]);
       await handleGenerateItinerary();
       return;
+    }
+
+    // Intercept itinerary modification commands (complete/uncomplete, replace title, set time/type)
+    const completionCmd = parseCompleteCommand(userMessage.text);
+    const replaceTitleCmd = parseReplaceTitleCommand(userMessage.text);
+    const setFieldCmd = parseSetFieldCommands(userMessage.text);
+
+    if (itineraryId && (completionCmd || replaceTitleCmd || setFieldCmd)) {
+      try {
+        setIsTyping(true);
+        if (completionCmd) {
+          const ok = await setActivityCompleted(itineraryId, completionCmd.dayIndex, completionCmd.activityIndex, completionCmd.completed);
+          const status = completionCmd.completed ? 'marked as done' : 'unchecked';
+          setMessages(prev => [...prev, { type: 'bot', text: ok ? `Okay — activity ${completionCmd.activityIndex + 1} on day ${completionCmd.dayIndex + 1} ${status}.` : 'Hmm, I could not update that activity.' }]);
+        } else if (replaceTitleCmd) {
+          const ok = await updateActivityDetails(itineraryId, replaceTitleCmd.dayIndex, replaceTitleCmd.activityIndex, { title: replaceTitleCmd.title });
+          setMessages(prev => [...prev, { type: 'bot', text: ok ? `Updated activity ${replaceTitleCmd.activityIndex + 1} on day ${replaceTitleCmd.dayIndex + 1} to “${replaceTitleCmd.title}”.` : 'I couldn’t update the activity title.' }]);
+        } else if (setFieldCmd) {
+          const ok = await updateActivityDetails(itineraryId, setFieldCmd.dayIndex, setFieldCmd.activityIndex, setFieldCmd);
+          const key = setFieldCmd.time ? 'time' : 'type';
+          const val = setFieldCmd[key];
+          setMessages(prev => [...prev, { type: 'bot', text: ok ? `Set ${key} for activity ${setFieldCmd.activityIndex + 1} on day ${setFieldCmd.dayIndex + 1} to ${val}.` : `I couldn’t set ${key} for that activity.` }]);
+        }
+        setIsTyping(false);
+        return;
+      } catch (err) {
+        console.error('Chatbot activity update failed', err);
+        setMessages(prev => [...prev, { type: 'bot', text: 'Sorry, I had trouble updating that activity.' }]);
+        setIsTyping(false);
+        return;
+      }
     }
 
     setIsTyping(true);
