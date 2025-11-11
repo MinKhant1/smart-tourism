@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTrip } from '../services/trips.service';
+import { searchCities } from '../services/cities.service';
 
 const TripSelection = () => {
   const navigate = useNavigate();
@@ -12,11 +13,21 @@ const TripSelection = () => {
     interests: []
   });
 
+  // Autocomplete state for Destination City
+  const [citySuggestions, setCitySuggestions] = useState([]);
+  const [cityLoading, setCityLoading] = useState(false);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const cityDebounceRef = useRef();
+
   // Removed chatbot; navigate directly to itineraries after creating a trip
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setTripData(prev => ({ ...prev, [name]: value }));
+    if (name === 'city') {
+      // Show dropdown when typing, will populate via effect
+      setShowCityDropdown(true);
+    }
   };
 
   const handleInterestChange = (interest) => {
@@ -26,6 +37,36 @@ const TripSelection = () => {
         ? prev.interests.filter(i => i !== interest)
         : [...prev.interests, interest]
     }));
+  };
+
+  // Debounced city suggestions
+  useEffect(() => {
+    const q = (tripData.city || '').trim();
+    if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current);
+    if (!q || q.length < 2) {
+      setCitySuggestions([]);
+      return;
+    }
+    cityDebounceRef.current = setTimeout(async () => {
+      try {
+        setCityLoading(true);
+        const results = await searchCities(q);
+        setCitySuggestions(results);
+      } catch {
+        setCitySuggestions([]);
+      } finally {
+        setCityLoading(false);
+      }
+    }, 250);
+    return () => {
+      if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current);
+    };
+  }, [tripData.city]);
+
+  const chooseCity = (city) => {
+    setTripData(prev => ({ ...prev, city }));
+    setShowCityDropdown(false);
+    setCitySuggestions([]);
   };
 
   const handleSubmit = async (e) => {
@@ -65,17 +106,40 @@ const TripSelection = () => {
               <h2 className="text-2xl font-bold text-gray-800 mb-6">Trip Details</h2>
               
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Destination City</label>
                   <input
                     type="text"
                     name="city"
                     value={tripData.city}
                     onChange={handleInputChange}
+                    onFocus={() => setShowCityDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowCityDropdown(false), 150)}
                     placeholder="Enter city name"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
+                  {showCityDropdown && (cityLoading || citySuggestions.length > 0) && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow">
+                      {cityLoading && (
+                        <div className="px-4 py-2 text-sm text-gray-500">Searching…</div>
+                      )}
+                      {!cityLoading && citySuggestions.map((s, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="w-full text-left px-4 py-2 hover:bg-blue-50"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => chooseCity(s.city)}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                      {!cityLoading && citySuggestions.length === 0 && (
+                        <div className="px-4 py-2 text-sm text-gray-500">No suggestions</div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

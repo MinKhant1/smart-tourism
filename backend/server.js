@@ -6,6 +6,7 @@ import { connectDB } from './lib/db.js';
 
 import authRoutes from './routes/auth.route.js';
 import itinerariesRoutes from './routes/itineraries.route.js';
+import citiesRoutes from './routes/cities.route.js';
 
 
 import { notFound, errorHandler } from './middleware/error.middleware.js';
@@ -21,6 +22,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/itineraries', itinerariesRoutes);
+app.use('/api/cities', citiesRoutes);
 app.use('/api/itinerary-text', itineraryTextRoutes);
 app.use('/api/trips', tripsRoutes);
 
