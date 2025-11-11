@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { planTripFromText } from '../services/itineraryText.service';
 import { planTripFromTextForTrip } from '../services/trips.service';
-import { sendTripChat, getTripChatHistory } from '../services/chat.service';
+import { sendTripChat, getTripChatHistory, logTripChat } from '../services/chat.service';
 import { setActivityCompleted, updateActivityDetails } from '../services/itineraries.service';
 
 const Chatbot = ({ onGenerateItinerary, tripId, itineraryId }) => {
@@ -77,7 +77,10 @@ const Chatbot = ({ onGenerateItinerary, tripId, itineraryId }) => {
     // Intercept generation keywords and trigger itinerary creation instead of regular chat
     if (isGenerateCommand(userMessage.text)) {
       setIsTyping(true);
-      setMessages(prev => [...prev, { type: 'bot', text: 'Got it — generating your itinerary now…' }]);
+      const ack = 'Got it — generating your itinerary now…';
+      setMessages(prev => [...prev, { type: 'bot', text: ack }]);
+      // Persist to chat history
+      try { if (tripId) await logTripChat(tripId, userMessage.text, ack); } catch {}
       await handleGenerateItinerary();
       return;
     }
@@ -93,15 +96,21 @@ const Chatbot = ({ onGenerateItinerary, tripId, itineraryId }) => {
         if (completionCmd) {
           const ok = await setActivityCompleted(itineraryId, completionCmd.dayIndex, completionCmd.activityIndex, completionCmd.completed);
           const status = completionCmd.completed ? 'marked as done' : 'unchecked';
-          setMessages(prev => [...prev, { type: 'bot', text: ok ? `Okay — activity ${completionCmd.activityIndex + 1} on day ${completionCmd.dayIndex + 1} ${status}.` : 'Hmm, I could not update that activity.' }]);
+          const reply = ok ? `Okay — activity ${completionCmd.activityIndex + 1} on day ${completionCmd.dayIndex + 1} ${status}.` : 'Hmm, I could not update that activity.';
+          setMessages(prev => [...prev, { type: 'bot', text: reply }]);
+          try { if (tripId) await logTripChat(tripId, userMessage.text, reply); } catch {}
         } else if (replaceTitleCmd) {
           const ok = await updateActivityDetails(itineraryId, replaceTitleCmd.dayIndex, replaceTitleCmd.activityIndex, { title: replaceTitleCmd.title });
-          setMessages(prev => [...prev, { type: 'bot', text: ok ? `Updated activity ${replaceTitleCmd.activityIndex + 1} on day ${replaceTitleCmd.dayIndex + 1} to “${replaceTitleCmd.title}”.` : 'I couldn’t update the activity title.' }]);
+          const reply = ok ? `Updated activity ${replaceTitleCmd.activityIndex + 1} on day ${replaceTitleCmd.dayIndex + 1} to “${replaceTitleCmd.title}”.` : 'I couldn’t update the activity title.';
+          setMessages(prev => [...prev, { type: 'bot', text: reply }]);
+          try { if (tripId) await logTripChat(tripId, userMessage.text, reply); } catch {}
         } else if (setFieldCmd) {
           const ok = await updateActivityDetails(itineraryId, setFieldCmd.dayIndex, setFieldCmd.activityIndex, setFieldCmd);
           const key = setFieldCmd.time ? 'time' : 'type';
           const val = setFieldCmd[key];
-          setMessages(prev => [...prev, { type: 'bot', text: ok ? `Set ${key} for activity ${setFieldCmd.activityIndex + 1} on day ${setFieldCmd.dayIndex + 1} to ${val}.` : `I couldn’t set ${key} for that activity.` }]);
+          const reply = ok ? `Set ${key} for activity ${setFieldCmd.activityIndex + 1} on day ${setFieldCmd.dayIndex + 1} to ${val}.` : `I couldn’t set ${key} for that activity.`;
+          setMessages(prev => [...prev, { type: 'bot', text: reply }]);
+          try { if (tripId) await logTripChat(tripId, userMessage.text, reply); } catch {}
         }
         setIsTyping(false);
         return;

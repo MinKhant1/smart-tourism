@@ -20,4 +20,11 @@ export const getTripChatHistory = async (tripId) => {
   return data.items || [];
 };
 
-export default { sendTripChat, getTripChatHistory };
+export const logTripChat = async (tripId, message, reply) => {
+  if (!tripId) throw new Error('Trip ID is required for chat log');
+  const payload = { message, reply };
+  const { data } = await axios.post(`${API_BASE}/trips/${tripId}/chat/log`, payload, { headers: authHeaders() });
+  return data.ok === true;
+};
+
+export default { sendTripChat, getTripChatHistory, logTripChat };

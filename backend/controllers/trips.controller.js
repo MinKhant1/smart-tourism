@@ -243,3 +243,27 @@ export const chatHistoryForTrip = async (req, res, next) => {
     next(err);
   }
 };
+
+// Log a user/assistant message pair to chat history without invoking LLM
+const chatLogSchema = z.object({
+  message: z.string().min(1),
+  reply: z.string().min(1),
+});
+
+export const logChatForTrip = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid trip id' });
+    }
+    const { message, reply } = chatLogSchema.parse(req.body);
+    const trip = await Trip.findOne({ _id: id, userId: req.userId });
+    if (!trip) return res.status(404).json({ message: 'Trip not found' });
+
+    await ChatMessage.create({ userId: req.userId, tripId: id, role: 'user', content: message });
+    await ChatMessage.create({ userId: req.userId, tripId: id, role: 'assistant', content: reply });
+    return res.status(201).json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
